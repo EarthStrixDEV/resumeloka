@@ -19,11 +19,11 @@
 
 ResumeLoka helps job seekers understand how their resume reads to a recruiter. Users upload a resume image, receive a structured profile extraction, get a 0-100 resume score, review concrete strengths and weaknesses, chat with a female HR Specialist assistant, and explore matched roles with direct JobThai and JobsDB search links.
 
-The product is built for the Thai job market and uses Typhoon/OpenTyphoon through an OpenAI-compatible server-side LLM layer. All model calls stay behind Next.js API routes so API keys and resume data are never exposed to the browser.
+The product is built for the Thai job market and uses Typhoon, a Thai AI engine from OpenTyphoon.ai, as the main intelligence layer. Typhoon powers resume OCR, structured resume scoring, job matching, and HR-style chat through an OpenAI-compatible server-side LLM layer. All model calls stay behind Next.js API routes so API keys and resume data are never exposed to the browser.
 
 ## Highlights
 
-- Professional landing page with product messaging, pricing, reviews, and conversion CTAs.
+- Professional landing page with product messaging, reviews, and conversion CTAs.
 - Studio-style resume analyzer with drag-and-drop upload, animated processing states, dashboard, analysis, job matches, and chat.
 - OCR plus resume analysis pipeline for PNG/JPG resumes.
 - HR Specialist chat persona that answers in plain, human-readable text instead of markdown.
@@ -41,6 +41,36 @@ The product is built for the Thai job market and uses Typhoon/OpenTyphoon throug
 | LLM Provider | Typhoon/OpenTyphoon via OpenAI-compatible API |
 | Runtime | Node.js API routes |
 | Language | TypeScript and JSX |
+
+## AI Engine: Typhoon Thai AI
+
+Typhoon is the main AI engine behind ResumeLoka. It is a Thai-optimized LLM platform from OpenTyphoon.ai, exposed through an OpenAI-compatible API. ResumeLoka uses Typhoon because resume analysis for Thai candidates needs strong Thai-English understanding, local job-market context, and reliable Thai-language feedback.
+
+Typhoon responsibilities in this project:
+
+| Capability | How ResumeLoka Uses Typhoon |
+| --- | --- |
+| OCR | Reads resume images and extracts Thai/English resume text |
+| Resume analysis | Converts raw resume text into score, profile, strengths, weaknesses, and recommendations |
+| Job matching | Generates realistic Thai-market role matches with fit scores and search queries |
+| HR chat | Streams grounded answers from a warm female HR Specialist persona |
+| Structured output | Produces strict JSON for app rendering, then the server validates it before use |
+
+Model routing is configured through environment variables:
+
+```bash
+LLM_MODEL_DEFAULT=typhoon-v2.5-30b-a3b-instruct
+LLM_MODEL_DEEP=typhoon-v2.5-30b-a3b-instruct
+LLM_MODEL_OCR=typhoon-ocr
+```
+
+The integration lives in `lib/llm`:
+
+- `config.ts` reads Typhoon credentials and model names.
+- `client.ts` wraps the OpenAI-compatible API, retries, timeouts, OCR calls, and streaming chat.
+- `prompts.ts` defines the OCR, analysis, job matching, and HR chat system prompts.
+- `json.ts` parses model output defensively.
+- `types.ts` defines the validated shape used by the UI.
 
 ## Application Routes
 
