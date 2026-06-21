@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import { translations, Lang, TranslationKey } from "@/lib/i18n/translations";
 
 interface LanguageContextValue {
@@ -16,12 +16,11 @@ const LanguageContext = createContext<LanguageContextValue>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
-
-  useEffect(() => {
+  const [lang, setLangState] = useState<Lang>(() => {
+    if (typeof window === "undefined") return "en";
     const saved = localStorage.getItem("resumeloka-lang") as Lang;
-    if (saved === "en" || saved === "th") setLangState(saved);
-  }, []);
+    return saved === "en" || saved === "th" ? saved : "en";
+  });
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);

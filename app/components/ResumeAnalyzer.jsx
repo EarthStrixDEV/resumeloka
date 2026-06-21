@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Upload, FileText, Image as ImageIcon, X, Sparkles, LayoutDashboard,
+  Upload, Image as ImageIcon, X, Sparkles, LayoutDashboard,
   ClipboardCheck, Briefcase, Send, ThumbsUp, AlertTriangle, Lightbulb,
   MapPin, Wallet, ArrowUpRight, RotateCcw, Check, Bot, Mail, Phone,
   GraduationCap, GitBranch

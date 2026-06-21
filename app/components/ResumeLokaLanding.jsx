@@ -85,18 +85,6 @@ export default function ResumeLokaLanding() {
     { quote: t("review3Quote"), name: "Kanyarat P.", role: "Fresh Graduate" },
   ];
 
-  const PLANS = [
-    {
-      name: t("plan1Name"), price: "฿0", note: t("plan1Note"),
-      items: [t("plan1Item1"), t("plan1Item2"), t("plan1Item3"), t("plan1Item4")],
-      cta: t("plan1Cta"), primary: false,
-    },
-    {
-      name: t("plan2Name"), price: "฿149", note: t("plan2Note"),
-      items: [t("plan2Item1"), t("plan2Item2"), t("plan2Item3"), t("plan2Item4"), t("plan2Item5")],
-      cta: t("plan2Cta"), primary: true,
-    },
-  ];
 
   const FAQS = [
     { q: t("faq1Q"), a: t("faq1A") },
@@ -123,7 +111,6 @@ export default function ResumeLokaLanding() {
           <a href="#how" onClick={go("how")}>{t("navHowItWorks")}</a>
           <a href="#features" onClick={go("features")}>{t("navFeatures")}</a>
           <a href="#reviews" onClick={go("reviews")}>{t("navReviews")}</a>
-          <a href="#pricing" onClick={go("pricing")}>{t("navPricing")}</a>
           <a href="/analyzer" className="btn btn-primary nav-cta">{t("navCta")}</a>
         </nav>
         <button className="lang-toggle" onClick={toggleLang} aria-label="Switch language">
@@ -253,35 +240,12 @@ export default function ResumeLokaLanding() {
             <Reveal key={r.name} delay={90 + i * 90}>
               <figure className="review-card">
                 <div className="stars sm">{[0, 1, 2, 3, 4].map((k) => <Star key={k} size={13} fill="currentColor" strokeWidth={0} />)}</div>
-                <blockquote>"{r.quote}"</blockquote>
+                <blockquote>&ldquo;{r.quote}&rdquo;</blockquote>
                 <figcaption>
                   <span className="rv-ava">{r.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}</span>
                   <span><b>{r.name}</b><i>{r.role}</i></span>
                 </figcaption>
               </figure>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* pricing */}
-      <section className="section" id="pricing">
-        <Reveal><p className="eyebrow">{t("pricingEyebrow")}</p></Reveal>
-        <Reveal delay={60}><h2 className="section-title">{t("pricingTitle")}</h2></Reveal>
-        <div className="plan-grid">
-          {PLANS.map((p, i) => (
-            <Reveal key={p.name} delay={90 + i * 90}>
-              <div className={"plan-card" + (p.primary ? " featured" : "")}>
-                {p.primary && <span className="plan-badge">{t("planBadge")}</span>}
-                <p className="plan-name">{p.name}</p>
-                <p className="plan-price"><span className="mono">{p.price}</span> <i>{p.note}</i></p>
-                <ul className="plan-items">
-                  {p.items.map((it) => (
-                    <li key={it}><span className="plan-check"><Check size={13} strokeWidth={3} /></span>{it}</li>
-                  ))}
-                </ul>
-                <a href="/analyzer" className={"btn " + (p.primary ? "btn-primary" : "btn-ghost")}>{p.cta}</a>
-              </div>
             </Reveal>
           ))}
         </div>
@@ -331,12 +295,11 @@ export default function ResumeLokaLanding() {
           <nav className="foot-links">
             <a href="#how" onClick={go("how")}>{t("navHowItWorks")}</a>
             <a href="#features" onClick={go("features")}>{t("navFeatures")}</a>
-            <a href="#pricing" onClick={go("pricing")}>{t("navPricing")}</a>
             <a href="#reviews" onClick={go("reviews")}>{t("navReviews")}</a>
           </nav>
         </div>
         <div className="foot-bottom">
-          <span>{t("footerCopyright")}</span>
+          <span>2026 EarthStrix SoftwareHouse</span>
           <span className="foot-legal">{t("footerPrivacy")}</span>
         </div>
       </footer>
@@ -573,21 +536,6 @@ const CSS = `
 .review-card figcaption b{display:block; font-size:13.5px;}
 .review-card figcaption i{display:block; font-size:12px; font-style:normal; color:var(--ink-soft); margin-top:1px;}
 
-/* pricing */
-.plan-grid{display:grid; grid-template-columns:repeat(2,minmax(0,340px)); gap:20px; justify-content:center; margin-top:48px;}
-.plan-card{position:relative; background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:28px; box-shadow:var(--shadow); display:flex; flex-direction:column;}
-.plan-card.featured{border:1.5px solid var(--brand); box-shadow:0 1px 2px rgba(16,20,38,.05), 0 26px 50px -24px rgba(79,70,229,.5);}
-.plan-badge{position:absolute; top:-12px; left:28px; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
-  background:var(--brand); color:#fff; padding:5px 12px; border-radius:20px;}
-.plan-name{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; color:var(--ink-soft);}
-.plan-price{display:flex; align-items:baseline; gap:6px; margin:8px 0 20px;}
-.plan-price .mono{font-size:36px; font-weight:600; color:var(--ink);}
-.plan-price i{font-size:13px; font-style:normal; color:var(--ink-faint);}
-.plan-items{list-style:none; margin:0 0 24px; padding:0; display:grid; gap:11px; flex:1;}
-.plan-items li{display:flex; gap:10px; font-size:13.5px; line-height:1.45; color:var(--ink-soft);}
-.plan-check{display:grid; place-items:center; width:18px; height:18px; border-radius:6px; background:var(--good-bg); color:var(--good); flex-shrink:0; margin-top:1px;}
-.plan-card .btn{width:100%;}
-
 /* faq */
 .faq-section{max-width:760px;}
 .faq-list{margin-top:40px; display:grid; gap:11px;}
@@ -635,7 +583,6 @@ const CSS = `
   .steps,.feat-grid,.review-grid,.stats-band{grid-template-columns:1fr;}
   .pain-grid{grid-template-columns:1fr; gap:28px;}
   .pain-left .eyebrow,.pain-left .section-title{text-align:center; margin-inline:auto;}
-  .plan-grid{grid-template-columns:1fr;}
   .float-tag{display:none;}
 }
 @media(max-width:680px){
