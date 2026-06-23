@@ -69,44 +69,48 @@ export async function POST(request: Request) {
     const listings = await searchAllSources(queries, 6);
     const capped = listings.slice(0, 12);
 
-    let jobs: JobMatch[];
+    let jobs: JobMatch[] = [];
     if (capped.length > 0) {
-      const ranked = await completeJson<RankedPick[]>(
-        {
-          task: "default",
-          temperature: 0.3,
-          maxTokens: 700,
-          messages: [
-            { role: "system", content: jobsRankPrompt() },
-            {
-              role: "user",
-              content:
-                `Candidate profile (JSON):\n${JSON.stringify(analysis.profile)}\n\n` +
-                `Listings:\n${formatListings(capped)}`,
-            },
-          ],
-        },
-        validateRanked,
-      );
-      jobs = ranked
-        .map((r) => {
-          const src = capped[r.id];
-          if (!src) return null;
-          return {
-            title: src.title,
-            company: src.company,
-            area: src.area,
-            salary: src.salary,
-            match: r.match,
-            tags: r.tags,
-            query: src.title,
-            url: src.url,
-            source: src.source,
-          } as JobMatch;
-        })
-        .filter((j): j is JobMatch => j !== null);
-    } else {
-      jobs = [];
+      try {
+        const ranked = await completeJson<RankedPick[]>(
+          {
+            task: "default",
+            temperature: 0.3,
+            maxTokens: 700,
+            messages: [
+              { role: "system", content: jobsRankPrompt() },
+              {
+                role: "user",
+                content:
+                  `Candidate profile (JSON):\n${JSON.stringify(analysis.profile)}\n\n` +
+                  `Listings:\n${formatListings(capped)}`,
+              },
+            ],
+          },
+          validateRanked,
+        );
+        jobs = ranked
+          .map((r) => {
+            const src = capped[r.id];
+            if (!src) return null;
+            return {
+              title: src.title,
+              company: src.company,
+              area: src.area,
+              salary: src.salary,
+              match: r.match,
+              tags: r.tags,
+              query: src.title,
+              url: src.url,
+              source: src.source,
+            } as JobMatch;
+          })
+          .filter((j): j is JobMatch => j !== null);
+      } catch {
+        // Ranking failed (empty/invalid LLM output) — leave jobs empty so the
+        // fallback generation below runs instead of failing the whole request.
+        jobs = [];
+      }
     }
 
     // Fallback: nothing real fetched or nothing ranked — use LLM-imagined jobs.
@@ -271,6 +275,7 @@ function formatListings(listings: RawListing[]): string {
 
 function validateRanked(v: unknown): RankedPick[] {
   const arr = Array.isArray(v) ? v : [];
+  const seen = new Set<number>();
   const picks = arr
     .map((p) => {
       const o = obj(p);
@@ -280,7 +285,11 @@ function validateRanked(v: unknown): RankedPick[] {
         tags: asStringArray(o.tags),
       };
     })
-    .filter((p) => Number.isInteger(p.id) && p.id >= 0);
+    .filter((p) => {
+      if (!Number.isInteger(p.id) || p.id < 0 || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
   if (picks.length === 0) throw new Error("No ranked picks returned");
   return picks;
 }
