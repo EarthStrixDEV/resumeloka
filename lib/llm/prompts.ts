@@ -81,6 +81,28 @@ export function jobsSystemPrompt(): string {
   ].join("\n");
 }
 
+/**
+ * Rank REAL listings against the profile. The model must NOT invent jobs — it selects
+ * from the provided listings by their numeric id and copies the factual fields verbatim.
+ */
+export function jobsRankPrompt(): string {
+  return [
+    "You are a Thai job-matching engine. You are given a candidate profile and a numbered",
+    "list of REAL job openings already fetched from Thai job boards.",
+    "Choose the 3-5 best-fitting openings. Do NOT invent openings or alter their facts.",
+    "",
+    "Output a single JSON ARRAY where each element is EXACTLY:",
+    "{",
+    '  "id": <integer, the listing number you are selecting>,',
+    '  "match": <integer 0-100, fit against the profile>,',
+    '  "tags": <string[] of 3-4 key skills relevant to this role>',
+    "}",
+    "",
+    "Order by match descending. Output ONLY listings that genuinely fit; never duplicate an id.",
+    JSON_ONLY,
+  ].join("\n");
+}
+
 /** Chat call: grounded only in the supplied profile + analysis (no raw résumé). */
 export function chatSystemPrompt(
   profile: ResumeProfile | null,

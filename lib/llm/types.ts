@@ -54,6 +54,8 @@ export interface JobMatch {
   match: number;
   tags: string[];
   query: string;
+  url: string;
+  source: "jobthai" | "jobsdb" | "";
 }
 
 /** Combined payload returned by POST /api/analyze. */
