@@ -40,6 +40,12 @@ export interface ResumeAnalysis {
   recommendations: string[];
 }
 
+/** Analyze block produced in both languages so the UI can swap with no refetch. */
+export interface BilingualAnalysis {
+  en: ResumeAnalysis;
+  th: ResumeAnalysis;
+}
+
 export interface JobMatch {
   title: string;
   company: string;
@@ -54,7 +60,7 @@ export interface JobMatch {
 export interface AnalyzeResult {
   score: number;
   profile: ResumeProfile;
-  analysis: ResumeAnalysis;
+  analysis: BilingualAnalysis;
   jobs: JobMatch[];
 }
 
@@ -62,5 +68,5 @@ export interface AnalyzeResult {
 export interface AnalysisLLMResult {
   score: number;
   profile: ResumeProfile;
-  analysis: ResumeAnalysis;
+  analysis: BilingualAnalysis;
 }

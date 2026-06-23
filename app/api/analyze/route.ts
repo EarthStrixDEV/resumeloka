@@ -9,6 +9,7 @@ import type {
   AnalysisLLMResult,
   AnalyzeResult,
   JobMatch,
+  ResumeAnalysis,
   ResumeProfile,
 } from "@/lib/llm/types";
 
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       {
         task: "default",
         temperature: 0.2,
-        maxTokens: 1500,
+        maxTokens: 2600,
         messages: [
           { role: "system", content: analysisSystemPrompt() },
           { role: "user", content: `Analyze this résumé:\n\n${text}` },
@@ -133,20 +134,36 @@ function validateProfile(v: unknown): ResumeProfile {
   };
 }
 
+function validateOneAnalysis(v: unknown): ResumeAnalysis {
+  const a = obj(v);
+  return {
+    advantages: asStringArray(a.advantages),
+    disadvantages: asStringArray(a.disadvantages),
+    recommendations: asStringArray(a.recommendations),
+  };
+}
+
+function isEmptyAnalysis(a: ResumeAnalysis): boolean {
+  return (
+    a.advantages.length === 0 &&
+    a.disadvantages.length === 0 &&
+    a.recommendations.length === 0
+  );
+}
+
 function validateAnalysis(v: unknown): AnalysisLLMResult {
   const o = obj(v);
   const a = obj(o.analysis);
-  const advantages = asStringArray(a.advantages);
-  const disadvantages = asStringArray(a.disadvantages);
-  const recommendations = asStringArray(a.recommendations);
-  // Reject clearly-empty results so completeJson() retries once.
-  if (advantages.length === 0 && disadvantages.length === 0 && recommendations.length === 0) {
+  const en = validateOneAnalysis(a.en);
+  const th = validateOneAnalysis(a.th);
+  // Reject only if BOTH languages are empty, so completeJson() retries once.
+  if (isEmptyAnalysis(en) && isEmptyAnalysis(th)) {
     throw new Error("Analysis was empty");
   }
   return {
     score: clampScore(o.score),
     profile: validateProfile(o.profile),
-    analysis: { advantages, disadvantages, recommendations },
+    analysis: { en, th },
   };
 }
 
