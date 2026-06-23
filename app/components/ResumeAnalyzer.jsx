@@ -604,8 +604,8 @@ function Jobs({ jobs }) {
         <Briefcase size={15} /> {t("jobsIntro")}
       </p>
       <div className="grid-jobs">
-        {jobs.map((j) => (
-          <article key={j.title} className="card job-card">
+        {jobs.map((j, i) => (
+          <article key={`${j.title}-${j.company}-${i}`} className="card job-card">
             <div className="job-top">
               <div>
                 <h3 className="job-title">{j.title}</h3>
