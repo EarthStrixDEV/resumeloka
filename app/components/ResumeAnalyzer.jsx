@@ -215,7 +215,7 @@ export default function ResumeAnalyzer() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, profile, analysis }),
+        body: JSON.stringify({ messages: history, profile, analysis: analysis?.[lang] ?? null }),
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
@@ -559,12 +559,13 @@ function Dashboard({ profile, score }) {
 }
 
 function Analysis({ analysis }) {
-  const { t } = useLanguage();
-  if (!analysis) return null;
+  const { lang, t } = useLanguage();
+  const a = analysis?.[lang];
+  if (!a) return null;
   const blocks = [
-    { key: "advantages", title: t("advantages"), icon: <ThumbsUp size={16} />, cls: "good", items: analysis.advantages },
-    { key: "disadvantages", title: t("disadvantages"), icon: <AlertTriangle size={16} />, cls: "warn", items: analysis.disadvantages },
-    { key: "recommendations", title: t("recommendations"), icon: <Lightbulb size={16} />, cls: "tip", items: analysis.recommendations },
+    { key: "advantages", title: t("advantages"), icon: <ThumbsUp size={16} />, cls: "good", items: a.advantages },
+    { key: "disadvantages", title: t("disadvantages"), icon: <AlertTriangle size={16} />, cls: "warn", items: a.disadvantages },
+    { key: "recommendations", title: t("recommendations"), icon: <Lightbulb size={16} />, cls: "tip", items: a.recommendations },
   ];
   return (
     <div className="grid-analysis fade-up">
