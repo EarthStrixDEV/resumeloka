@@ -624,12 +624,25 @@ function Jobs({ jobs }) {
               {j.tags.map((tag) => <span key={tag} className="tag">{tag}</span>)}
             </div>
             <div className="job-actions">
-              <a className="btn btn-jobthai" href={jobThai(j.query || j.title)} target="_blank" rel="noreferrer">
-                JobThai <ArrowUpRight size={14} />
-              </a>
-              <a className="btn btn-jobsdb" href={jobsDB(j.query || j.title)} target="_blank" rel="noreferrer">
-                JobsDB <ArrowUpRight size={14} />
-              </a>
+              {j.url ? (
+                <a
+                  className={"btn " + (j.source === "jobsdb" ? "btn-jobsdb" : "btn-jobthai")}
+                  href={j.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {j.source === "jobsdb" ? "JobsDB" : "JobThai"} <ArrowUpRight size={14} />
+                </a>
+              ) : (
+                <>
+                  <a className="btn btn-jobthai" href={jobThai(j.query || j.title)} target="_blank" rel="noreferrer">
+                    JobThai <ArrowUpRight size={14} />
+                  </a>
+                  <a className="btn btn-jobsdb" href={jobsDB(j.query || j.title)} target="_blank" rel="noreferrer">
+                    JobsDB <ArrowUpRight size={14} />
+                  </a>
+                </>
+              )}
             </div>
           </article>
         ))}
