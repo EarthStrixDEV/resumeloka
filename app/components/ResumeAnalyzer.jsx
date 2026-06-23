@@ -215,7 +215,7 @@ export default function ResumeAnalyzer() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, profile, analysis }),
+        body: JSON.stringify({ messages: history, profile, analysis: analysis?.[lang] ?? null }),
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
@@ -559,12 +559,13 @@ function Dashboard({ profile, score }) {
 }
 
 function Analysis({ analysis }) {
-  const { t } = useLanguage();
-  if (!analysis) return null;
+  const { lang, t } = useLanguage();
+  const a = analysis?.[lang];
+  if (!a) return null;
   const blocks = [
-    { key: "advantages", title: t("advantages"), icon: <ThumbsUp size={16} />, cls: "good", items: analysis.advantages },
-    { key: "disadvantages", title: t("disadvantages"), icon: <AlertTriangle size={16} />, cls: "warn", items: analysis.disadvantages },
-    { key: "recommendations", title: t("recommendations"), icon: <Lightbulb size={16} />, cls: "tip", items: analysis.recommendations },
+    { key: "advantages", title: t("advantages"), icon: <ThumbsUp size={16} />, cls: "good", items: a.advantages },
+    { key: "disadvantages", title: t("disadvantages"), icon: <AlertTriangle size={16} />, cls: "warn", items: a.disadvantages },
+    { key: "recommendations", title: t("recommendations"), icon: <Lightbulb size={16} />, cls: "tip", items: a.recommendations },
   ];
   return (
     <div className="grid-analysis fade-up">
@@ -603,8 +604,8 @@ function Jobs({ jobs }) {
         <Briefcase size={15} /> {t("jobsIntro")}
       </p>
       <div className="grid-jobs">
-        {jobs.map((j) => (
-          <article key={j.title} className="card job-card">
+        {jobs.map((j, i) => (
+          <article key={`${j.title}-${j.company}-${i}`} className="card job-card">
             <div className="job-top">
               <div>
                 <h3 className="job-title">{j.title}</h3>
@@ -623,12 +624,25 @@ function Jobs({ jobs }) {
               {j.tags.map((tag) => <span key={tag} className="tag">{tag}</span>)}
             </div>
             <div className="job-actions">
-              <a className="btn btn-jobthai" href={jobThai(j.query || j.title)} target="_blank" rel="noreferrer">
-                JobThai <ArrowUpRight size={14} />
-              </a>
-              <a className="btn btn-jobsdb" href={jobsDB(j.query || j.title)} target="_blank" rel="noreferrer">
-                JobsDB <ArrowUpRight size={14} />
-              </a>
+              {j.url ? (
+                <a
+                  className={"btn " + (j.source === "jobsdb" ? "btn-jobsdb" : "btn-jobthai")}
+                  href={j.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {j.source === "jobsdb" ? "JobsDB" : "JobThai"} <ArrowUpRight size={14} />
+                </a>
+              ) : (
+                <>
+                  <a className="btn btn-jobthai" href={jobThai(j.query || j.title)} target="_blank" rel="noreferrer">
+                    JobThai <ArrowUpRight size={14} />
+                  </a>
+                  <a className="btn btn-jobsdb" href={jobsDB(j.query || j.title)} target="_blank" rel="noreferrer">
+                    JobsDB <ArrowUpRight size={14} />
+                  </a>
+                </>
+              )}
             </div>
           </article>
         ))}

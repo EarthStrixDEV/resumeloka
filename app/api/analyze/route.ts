@@ -4,11 +4,13 @@
 
 import { asStringArray, clampScore } from "@/lib/llm/json";
 import { completeJson, ocr, toLLMError } from "@/lib/llm/client";
-import { analysisSystemPrompt, jobsSystemPrompt } from "@/lib/llm/prompts";
+import { analysisSystemPrompt, jobsRankPrompt, jobsSystemPrompt } from "@/lib/llm/prompts";
+import { searchAllSources, type RawListing } from "@/lib/jobs/sources";
 import type {
   AnalysisLLMResult,
   AnalyzeResult,
   JobMatch,
+  ResumeAnalysis,
   ResumeProfile,
 } from "@/lib/llm/types";
 
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
       {
         task: "default",
         temperature: 0.2,
-        maxTokens: 1500,
+        maxTokens: 2600,
         messages: [
           { role: "system", content: analysisSystemPrompt() },
           { role: "user", content: `Analyze this résumé:\n\n${text}` },
@@ -62,22 +64,73 @@ export async function POST(request: Request) {
       validateAnalysis,
     );
 
-    // Job matching from the extracted profile.
-    const jobs = await completeJson<JobMatch[]>(
-      {
-        task: "default",
-        temperature: 0.5,
-        maxTokens: 900,
-        messages: [
-          { role: "system", content: jobsSystemPrompt() },
+    // Real listings → LLM ranking; fall back to LLM-imagined jobs if none fetched.
+    const queries = buildJobQueries(analysis.profile);
+    const listings = await searchAllSources(queries, 6);
+    const capped = listings.slice(0, 12);
+
+    let jobs: JobMatch[] = [];
+    if (capped.length > 0) {
+      try {
+        const ranked = await completeJson<RankedPick[]>(
           {
-            role: "user",
-            content: `Candidate profile (JSON):\n${JSON.stringify(analysis.profile)}`,
+            task: "default",
+            temperature: 0.3,
+            maxTokens: 700,
+            messages: [
+              { role: "system", content: jobsRankPrompt() },
+              {
+                role: "user",
+                content:
+                  `Candidate profile (JSON):\n${JSON.stringify(analysis.profile)}\n\n` +
+                  `Listings:\n${formatListings(capped)}`,
+              },
+            ],
           },
-        ],
-      },
-      validateJobs,
-    );
+          validateRanked,
+        );
+        jobs = ranked
+          .map((r) => {
+            const src = capped[r.id];
+            if (!src) return null;
+            return {
+              title: src.title,
+              company: src.company,
+              area: src.area,
+              salary: src.salary,
+              match: r.match,
+              tags: r.tags,
+              query: src.title,
+              url: src.url,
+              source: src.source,
+            } as JobMatch;
+          })
+          .filter((j): j is JobMatch => j !== null);
+      } catch {
+        // Ranking failed (empty/invalid LLM output) — leave jobs empty so the
+        // fallback generation below runs instead of failing the whole request.
+        jobs = [];
+      }
+    }
+
+    // Fallback: nothing real fetched or nothing ranked — use LLM-imagined jobs.
+    if (jobs.length === 0) {
+      jobs = await completeJson<JobMatch[]>(
+        {
+          task: "default",
+          temperature: 0.5,
+          maxTokens: 900,
+          messages: [
+            { role: "system", content: jobsSystemPrompt() },
+            {
+              role: "user",
+              content: `Candidate profile (JSON):\n${JSON.stringify(analysis.profile)}`,
+            },
+          ],
+        },
+        validateJobs,
+      );
+    }
 
     const result: AnalyzeResult = {
       score: analysis.score,
@@ -133,20 +186,36 @@ function validateProfile(v: unknown): ResumeProfile {
   };
 }
 
+function validateOneAnalysis(v: unknown): ResumeAnalysis {
+  const a = obj(v);
+  return {
+    advantages: asStringArray(a.advantages),
+    disadvantages: asStringArray(a.disadvantages),
+    recommendations: asStringArray(a.recommendations),
+  };
+}
+
+function isEmptyAnalysis(a: ResumeAnalysis): boolean {
+  return (
+    a.advantages.length === 0 &&
+    a.disadvantages.length === 0 &&
+    a.recommendations.length === 0
+  );
+}
+
 function validateAnalysis(v: unknown): AnalysisLLMResult {
   const o = obj(v);
   const a = obj(o.analysis);
-  const advantages = asStringArray(a.advantages);
-  const disadvantages = asStringArray(a.disadvantages);
-  const recommendations = asStringArray(a.recommendations);
-  // Reject clearly-empty results so completeJson() retries once.
-  if (advantages.length === 0 && disadvantages.length === 0 && recommendations.length === 0) {
+  const en = validateOneAnalysis(a.en);
+  const th = validateOneAnalysis(a.th);
+  // Reject only if BOTH languages are empty, so completeJson() retries once.
+  if (isEmptyAnalysis(en) && isEmptyAnalysis(th)) {
     throw new Error("Analysis was empty");
   }
   return {
     score: clampScore(o.score),
     profile: validateProfile(o.profile),
-    analysis: { advantages, disadvantages, recommendations },
+    analysis: { en, th },
   };
 }
 
@@ -164,9 +233,63 @@ function validateJobs(v: unknown): JobMatch[] {
         match: clampScore(o.match),
         tags: asStringArray(o.tags),
         query: str(o.query) || title,
+        url: "",
+        source: "" as const,
       };
     })
     .filter((j) => j.title.length > 0);
   if (jobs.length === 0) throw new Error("No jobs returned");
   return jobs;
+}
+
+interface RankedPick {
+  id: number;
+  match: number;
+  tags: string[];
+}
+
+function buildJobQueries(profile: ResumeProfile): string[] {
+  const queries: string[] = [];
+  const role = str(profile.role).trim();
+  const skills = profile.skills.slice(0, 3).filter((s) => s.trim());
+  if (role) queries.push(role);
+  if (role && skills[0]) queries.push(`${role} ${skills[0]}`);
+  if (skills[0] && queries.length < 2) queries.push(skills[0]);
+  return queries.length > 0 ? queries.slice(0, 2) : ["software engineer"];
+}
+
+function formatListings(listings: RawListing[]): string {
+  return listings
+    .map((l, i) => {
+      const parts = [
+        `[${i}] ${l.title}`,
+        l.company && `Company: ${l.company}`,
+        l.area && `Area: ${l.area}`,
+        l.salary && `Salary: ${l.salary}`,
+        l.snippet && `About: ${l.snippet}`,
+      ].filter(Boolean);
+      return parts.join(" | ");
+    })
+    .join("\n");
+}
+
+function validateRanked(v: unknown): RankedPick[] {
+  const arr = Array.isArray(v) ? v : [];
+  const seen = new Set<number>();
+  const picks = arr
+    .map((p) => {
+      const o = obj(p);
+      return {
+        id: Math.round(num(o.id)),
+        match: clampScore(o.match),
+        tags: asStringArray(o.tags),
+      };
+    })
+    .filter((p) => {
+      if (!Number.isInteger(p.id) || p.id < 0 || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  if (picks.length === 0) throw new Error("No ranked picks returned");
+  return picks;
 }
